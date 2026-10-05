@@ -3,6 +3,7 @@ use color_eyre::Result;
 
 use fido2_tui::fido::FidoBackend;
 use fido2_tui::fido::native::Libfido2;
+use fido2_tui::sys;
 
 #[derive(Parser, Debug)]
 #[command(name = "fido2-tui", version, about = "Manage FIDO2 security keys")]
@@ -40,6 +41,12 @@ fn list_devices(backend: &dyn FidoBackend) -> Result<()> {
             }
             Err(e) => println!("{}  {}  - error: {e}", s.path, s.product),
         }
+    }
+    for k in sys::inaccessible_fido_nodes() {
+        println!(
+            "{}  {}  - NOT ACCESSIBLE (permission denied; run ./install.sh to add a udev rule)",
+            k.node, k.name
+        );
     }
     Ok(())
 }
