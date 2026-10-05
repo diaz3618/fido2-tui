@@ -534,7 +534,9 @@ impl FidoBackend for Libfido2 {
     }
 
     fn verify_pin(&self, path: &str, pin: &str) -> FidoResult<()> {
-        self.storage_stats(path, pin).map(|_| ())
+        self.storage_stats(path, pin)
+            .map(|_| ())
+            .map_err(|e| FidoError::new(e.code, explain_error(e.code, "Verifying PIN")))
     }
 
     fn factory_reset(&self, path: &str) -> FidoResult<()> {

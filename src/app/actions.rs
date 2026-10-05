@@ -665,6 +665,13 @@ impl App {
             return;
         };
         let target = !dev.is_always_uv();
+        let summary = DeviceSummary {
+            path: dev.path.clone(),
+            vendor_id: dev.vendor_id,
+            product_id: dev.product_id,
+            manufacturer: dev.manufacturer.clone(),
+            product: dev.product.clone(),
+        };
         let body = if target {
             vec![
                 "Every sign-in will require the PIN (or fingerprint), including".into(),
@@ -675,29 +682,25 @@ impl App {
         };
         self.modal = Some(Modal::Confirm(
             Confirm::new(
-                if target {
-                    "Enable Always-UV?"
-                } else {
-                    "Disable Always-UV?"
-                },
+                if target { "Enable Always-UV?" } else { "Disable Always-UV?" },
                 body,
                 Box::new(move |app| {
                     app.require_pin("Authorize the configuration change", move |app, pin| {
-                        app.with_pin_job(
-                            pin,
-                            "Updating configuration...",
-                            false,
-                            move |b, path, pin, _| {
-                                b.toggle_always_uv(path, pin)?;
-                                Ok(Outcome::Done {
-                                    message: format!(
-                                        "Always-UV {}",
-                                        if target { "enabled" } else { "disabled" }
-                                    ),
-                                    reload: Reload::DEVICES,
-                                })
-                            },
-                        );
+                        app.with_pin_job(pin, "Updating configuration...", false, move |b, path, pin, _| {
+                            b.toggle_always_uv(path, pin)?;
+                            // Some firmware (e.g. Pico-FIDO) always reports Always-UV while a
+                            // PIN is set; tell the user what the key actually reports.
+                            let now = b.device_info(&summary).map(|d| d.is_always_uv()).unwrap_or(target);
+                            let message = if now == target {
+                                format!("Always-UV {}", if target { "enabled" } else { "disabled" })
+                            } else {
+                                format!(
+                                    "Setting saved, but the key still reports Always-UV {} (its firmware enforces it)",
+                                    if now { "on" } else { "off" }
+                                )
+                            };
+                            Ok(Outcome::Done { message, reload: Reload::DEVICES })
+                        });
                     });
                 }),
             )
@@ -856,7 +859,7 @@ impl App {
             };
             let pin_meta = pin.clone().map(|p| (path.clone(), p));
             app.run_with_pin(
-                "Self-test: touch your key when it blinks",
+                "Self-test: touch your key (press its button) if it asks",
                 true,
                 pin_meta,
                 move |b, prog| {
@@ -1225,7 +1228,8 @@ impl App {
             return;
         }
         let user = std::env::var("USER").unwrap_or_else(|_| "user".into());
-        let host = std::fs::read_to_string("/etc/hostname")
+        let host = std::fs::read_to_string("/proc/sys/kernel/hostname")
+            .or_else(|_| std::fs::read_to_string("/etc/hostname"))
             .unwrap_or_default()
             .trim()
             .to_string();
@@ -1240,18 +1244,9 @@ impl App {
         let form = Form::new(
             "Generate SSH key",
             vec![
-                Field::choice(
-                    "Type",
-                    &["ed25519-sk", "ecdsa-sk"],
-                    if eddsa { 0 } else { 1 },
-                )
-                .hint(if eddsa {
-                    ""
-                } else {
-                    "this key does not support Ed25519"
-                }),
-                Field::toggle("Store on key (resident)", true)
-                    .hint("lets you recover it with ssh-keygen -K"),
+                Field::choice("Type", &["ed25519-sk", "ecdsa-sk"], if eddsa { 0 } else { 1 })
+                    .hint(if eddsa { "" } else { "this key does not support Ed25519" }),
+                Field::toggle("Store on key (resident)", true).hint("lets you recover it with ssh-keygen -K"),
                 Field::toggle("Require PIN (verify-required)", has_pin),
                 Field::text("Application", "ssh:").hint("must start with ssh:"),
                 Field::text("Comment", &format!("{user}@{host} fido2")),
@@ -1276,8 +1271,7 @@ impl App {
                 if std::path::Path::new(&out).exists() {
                     return Err(format!("{out} already exists - choose another file"));
                 }
-                let mut args: Vec<String> =
-                    vec!["-t".into(), ktype, "-O".into(), format!("device={path}")];
+                let mut args: Vec<String> = vec!["-t".into(), ktype, "-O".into(), format!("device={path}")];
                 if f[1].checked {
                     args.extend(["-O".into(), "resident".into()]);
                 }
@@ -1290,8 +1284,7 @@ impl App {
                 args.extend(["-C".into(), f[4].value.trim().to_string(), "-f".into(), out]);
                 let _ = std::fs::create_dir_all(sys::home().join(".ssh"));
                 let cmd = ExternalCommand {
-                    title: "Generate SSH key - follow the prompts, touch the key when it blinks"
-                        .into(),
+                    title: "Generate SSH key - follow the prompts; touch the key if it asks for presence".into(),
                     program: "ssh-keygen".into(),
                     args,
                     cwd: Some(sys::home().join(".ssh")),

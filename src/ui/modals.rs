@@ -341,7 +341,9 @@ pub fn render_busy(app: &App, b: &Busy, f: &mut Frame, area: Rect) {
     }
     lines.push(Line::raw(""));
     let footer = if b.touch {
-        format!("Touch the blinking key · times out after ~30 s · {secs}s")
+        format!(
+            "Touch / press the button on your key if it is waiting · times out after ~30 s · {secs}s"
+        )
     } else {
         format!("{secs}s")
     };
@@ -390,7 +392,7 @@ pub fn render_reset(app: &App, f: &mut Frame, area: Rect) {
         Line::raw(""),
         step(1, "Unplug the security key", s1),
         step(2, "Plug it back in", s2),
-        step(3, "Touch it when it blinks", s3),
+        step(3, "Touch / press its button to confirm", s3),
         Line::raw(""),
     ];
     match w.stage {
