@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Checks run before each commit. Enable with: git config core.hooksPath .githooks
+# Skip once with: git commit --no-verify
+set -euo pipefail
+
+fail() {
+    printf '\033[31mpre-commit: %s\033[0m\n' "$*" >&2
+    exit 1
+}
+
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACMR)
+[ "${#staged[@]}" -eq 0 ] && exit 0
+
+# Leftover merge conflict markers.
+if git diff --cached -U0 | grep -qE '^\+(<<<<<<<|>>>>>>>)( |$)'; then
+    fail "staged changes contain merge conflict markers"
+fi
+
+rust=0
+shell=()
+for f in "${staged[@]}"; do
+    case "$f" in
+        *.rs | Cargo.toml | Cargo.lock) rust=1 ;;
+        *.sh | .githooks/*) shell+=("$f") ;;
+    esac
+done
+
+if [ "$rust" -eq 1 ]; then
+    cargo fmt --all --check || fail "formatting differs; run 'cargo fmt' and stage the result"
+    cargo clippy --all-targets --locked --quiet -- -D warnings || fail "clippy reported problems"
+fi
+
+if [ "${#shell[@]}" -gt 0 ]; then
+    if command -v shellcheck >/dev/null 2>&1; then
+        shellcheck "${shell[@]}" || fail "shellcheck reported problems"
+    else
+        echo "pre-commit: shellcheck not installed, skipping shell checks" >&2
+    fi
+fi
+
+# Secret scanning on the staged files, when semgrep is available locally.
+if command -v semgrep >/dev/null 2>&1; then
+    semgrep scan --metrics=off --quiet --error --config p/secrets "${staged[@]}" \
+        || fail "semgrep found possible secrets"
+fi

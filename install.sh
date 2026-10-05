@@ -69,6 +69,7 @@ if [ "$UNINSTALL" -eq 1 ]; then
 fi
 
 # Distro
+# shellcheck source=/dev/null
 . /etc/os-release 2>/dev/null || true
 ID_ALL="${ID:-unknown} ${ID_LIKE:-}"
 PM=""
@@ -133,6 +134,7 @@ rust_ok() {
     version_ge "$v" "$MIN_RUST"
 }
 
+# shellcheck source=/dev/null
 [ -f "${HOME}/.cargo/env" ] && . "${HOME}/.cargo/env"
 step "Checking Rust toolchain (need >= ${MIN_RUST})"
 if ! rust_ok && [ "${#DISTRO_RUST[@]}" -gt 0 ]; then
@@ -142,6 +144,7 @@ if ! rust_ok; then
     warn "Distribution Rust missing or too old; installing via rustup (user-local)"
     command -v curl >/dev/null 2>&1 || die "curl is required to install rustup"
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+    # shellcheck source=/dev/null
     . "${HOME}/.cargo/env"
 fi
 rust_ok || die "Rust >= ${MIN_RUST} is still not available"

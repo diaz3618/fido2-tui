@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Keep commit subjects short and imperative-style: one line, at most 72
+# characters, no trailing period, blank line before the body.
+set -euo pipefail
+
+msg_file="$1"
+mapfile -t lines < <(grep -v '^#' "$msg_file")
+subject="${lines[0]:-}"
+
+case "$subject" in
+    "Merge "* | "Revert "* | "fixup! "* | "squash! "*) exit 0 ;;
+esac
+
+fail() {
+    printf '\033[31mcommit-msg: %s\033[0m\n' "$*" >&2
+    exit 1
+}
+
+[ -n "${subject// /}" ] || fail "empty subject line"
+[ "${#subject}" -le 72 ] || fail "subject is ${#subject} characters (max 72)"
+[ "${subject: -1}" != "." ] || fail "subject should not end with a period"
+if [ "${#lines[@]}" -gt 1 ] && [ -n "${lines[1]}" ]; then
+    fail "separate the subject from the body with a blank line"
+fi

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Runs the test suite before pushing, and refuses to push a release tag that
+# does not match Cargo.toml or has no CHANGELOG entry.
+set -euo pipefail
+
+fail() {
+    printf '\033[31mpre-push: %s\033[0m\n' "$*" >&2
+    exit 1
+}
+
+version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+    # Deleting a ref: nothing to check.
+    [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+    case "$remote_ref" in
+        refs/tags/v*)
+            tag="${remote_ref#refs/tags/}"
+            [ "$tag" = "v$version" ] || fail "tag $tag does not match Cargo.toml version $version"
+            grep -q "^## \[$version\]" CHANGELOG.md || fail "CHANGELOG.md has no entry for $version"
+            ;;
+    esac
+done
+
+cargo test --locked --quiet || fail "tests failed"

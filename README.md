@@ -116,6 +116,15 @@ cargo test
 cargo clippy --all-targets
 ```
 
+The repository ships git hooks: `pre-commit` (rustfmt, clippy, ShellCheck,
+and Semgrep secret scanning when installed), `commit-msg` (subject line rules)
+and `pre-push` (tests, and release tags must match `Cargo.toml` and
+`CHANGELOG.md`). Enable them once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 The interface takes ideas from Yubico Authenticator, Token2 fido2-manage,
 keyroost, lazygit and k9s.
 
