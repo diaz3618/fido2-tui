@@ -1,0 +1,46 @@
+name: Semgrep
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep scan
+    runs-on: ubuntu-24.04
+    container:
+      image: semgrep/semgrep:latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The unsafe-usage rule flags every unsafe block. This crate is an FFI
+      # binding to libfido2, so those blocks are expected and reviewed by hand;
+      # the rule is excluded to keep real findings visible.
+      - name: Scan
+        run: >
+          semgrep scan
+          --metrics=off
+          --config p/default
+          --config p/rust
+          --config p/secrets
+          --config p/github-actions
+          --exclude-rule rust.lang.security.unsafe-usage.unsafe-usage
+          --sarif --output semgrep.sarif
+          --error
+      - name: Upload results to code scanning
+        if: always() && github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
