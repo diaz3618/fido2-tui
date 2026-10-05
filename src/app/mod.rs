@@ -87,6 +87,12 @@ pub struct Busy {
     pub started: Instant,
 }
 
+pub struct ActivityEntry {
+    pub time: chrono::DateTime<chrono::Local>,
+    pub level: Level,
+    pub message: String,
+}
+
 pub struct Toast {
     pub message: String,
     pub level: Level,
@@ -166,6 +172,7 @@ pub struct App {
     pub modal: Option<Modal>,
     pub busy: Option<Busy>,
     pub toast: Option<Toast>,
+    pub activity: Vec<ActivityEntry>,
     pub external: Option<(ExternalCommand, Reload)>,
     pub reset: Option<ResetWizard>,
     pub should_quit: bool,
@@ -206,6 +213,7 @@ impl App {
             modal: None,
             busy: None,
             toast: None,
+            activity: Vec::new(),
             external: None,
             reset: None,
             should_quit: false,
@@ -291,11 +299,26 @@ impl App {
     // Toasts
 
     pub fn notify(&mut self, level: Level, message: impl Into<String>) {
+        let message = message.into();
+        if level != Level::Info {
+            self.log(level, message.clone());
+        }
         self.toast = Some(Toast {
-            message: message.into(),
+            message,
             level,
             at: Instant::now(),
         });
+    }
+
+    pub fn log(&mut self, level: Level, message: impl Into<String>) {
+        self.activity.push(ActivityEntry {
+            time: chrono::Local::now(),
+            level,
+            message: message.into(),
+        });
+        if self.activity.len() > 200 {
+            self.activity.remove(0);
+        }
     }
 
     pub fn message(&mut self, level: Level, title: &str, body: &[&str]) {
@@ -457,6 +480,23 @@ impl App {
                 self.scanning = false;
                 self.scanned_once = true;
                 let previous = self.device_path();
+                let added: Vec<String> = devices
+                    .iter()
+                    .filter(|d| !self.devices.iter().any(|o| o.path == d.path))
+                    .map(|d| format!("Connected {} ({})", d.display_name(), d.path))
+                    .collect();
+                for a in added {
+                    self.log(Level::Info, a);
+                }
+                let gone: Vec<String> = self
+                    .devices
+                    .iter()
+                    .filter(|o| !devices.iter().any(|d| d.path == o.path))
+                    .map(|o| format!("Disconnected {} ({})", o.display_name(), o.path))
+                    .collect();
+                for g in gone {
+                    self.log(Level::Info, g);
+                }
                 // Forget sessions (and cached PINs) of keys that were unplugged.
                 self.sessions
                     .retain(|p, _| devices.iter().any(|d| &d.path == p));

@@ -40,7 +40,17 @@ pub fn render_page(app: &App, f: &mut Frame, area: Rect) {
 
 /// Context-sensitive key hints for the footer.
 pub fn page_hints(app: &App) -> Vec<(&'static str, &'static str)> {
+    let no_pin = app
+        .device()
+        .is_some_and(|d| d.supports_pin() && !d.has_pin_set());
+    let needs_pin = matches!(
+        app.page,
+        Page::Passkeys | Page::LargeBlobs | Page::Fingerprints
+    );
     let mut h: Vec<(&str, &str)> = match app.page {
+        _ if no_pin && needs_pin => vec![("p", "set PIN")],
+        Page::Fingerprints if app.device().is_some_and(|d| !d.supports_bio()) => vec![],
+        Page::LargeBlobs if app.device().is_some_and(|d| !d.supports_large_blobs()) => vec![],
         Page::Overview if app.device().is_some() => {
             let mut v = vec![("t", "self-test"), ("i", "identify")];
             if app.device().is_some_and(|d| d.has_pin_set()) {

@@ -161,7 +161,7 @@ impl AuditReport {
                     CheckStatus::Info,
                     "Some sites can sign in with touch only (U2F-style)".into(),
                     dev.supports_config()
-                        .then_some("Enable Always-UV in PIN & Security (press u)"),
+                        .then_some("Enable Always-UV in PIN & Security (press a)"),
                     5,
                 );
             }

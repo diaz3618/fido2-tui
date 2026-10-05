@@ -64,14 +64,15 @@ pub fn render(app: &App, f: &mut Frame, area: Rect) {
         return;
     };
     let multi = app.devices.len() > 1;
-    let [list_area, top, bottom] = Layout::vertical([
+    let [list_area, top, bottom, log_area] = Layout::vertical([
         Constraint::Length(if multi {
             app.devices.len() as u16 + 2
         } else {
             0
         }),
         Constraint::Length(12),
-        Constraint::Min(6),
+        Constraint::Length(7),
+        Constraint::Min(3),
     ])
     .areas(area);
 
@@ -327,4 +328,37 @@ pub fn render(app: &App, f: &mut Frame, area: Rect) {
         ]));
     }
     f.render_widget(Paragraph::new(al).block(panel(t, "Quick actions")), actions);
+
+    render_activity(app, f, log_area);
+}
+
+fn render_activity(app: &App, f: &mut Frame, area: Rect) {
+    let t = &app.theme;
+    let rows = area.height.saturating_sub(2) as usize;
+    let lines: Vec<Line> = if app.activity.is_empty() {
+        vec![Line::styled(
+            "Nothing yet - actions and plug/unplug events appear here.",
+            t.dim(),
+        )]
+    } else {
+        app.activity
+            .iter()
+            .rev()
+            .take(rows)
+            .map(|e| {
+                let (icon, color) = match e.level {
+                    crate::app::modal::Level::Info => ("·", t.muted),
+                    crate::app::modal::Level::Success => ("✓", t.success),
+                    crate::app::modal::Level::Warn => ("!", t.warning),
+                    crate::app::modal::Level::Error => ("✗", t.danger),
+                };
+                Line::from(vec![
+                    Span::styled(e.time.format("%H:%M:%S  ").to_string(), t.dim()),
+                    Span::styled(format!("{icon} "), Style::default().fg(color)),
+                    Span::styled(e.message.clone(), t.text()),
+                ])
+            })
+            .collect()
+    };
+    f.render_widget(Paragraph::new(lines).block(panel(t, "Activity")), area);
 }

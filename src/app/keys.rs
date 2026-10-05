@@ -99,6 +99,14 @@ impl App {
                 self.notify(Level::Info, format!("Theme: {}", self.theme.name));
                 return;
             }
+            KeyCode::Char('p') if self.device().is_some() => {
+                if self.device().is_some_and(|d| d.has_pin_set()) {
+                    self.open_change_pin_form()
+                } else {
+                    self.open_set_pin_form()
+                }
+                return;
+            }
             KeyCode::Char('i') if self.page != Page::Passkeys => {
                 self.identify();
                 return;
@@ -184,13 +192,6 @@ impl App {
                 self.select_device(self.overview_list.selected);
             }
             KeyCode::Char('t') => self.self_test(),
-            KeyCode::Char('p') => {
-                if self.device().is_some_and(|d| d.has_pin_set()) {
-                    self.open_change_pin_form()
-                } else {
-                    self.open_set_pin_form()
-                }
-            }
             KeyCode::Char('u') => self.unlock(),
             _ => {}
         }
@@ -234,13 +235,6 @@ impl App {
                         Ok(()) => self.run_security_action(item.action),
                         Err(why) => self.notify(Level::Warn, why.clone()),
                     }
-                }
-            }
-            KeyCode::Char('p') => {
-                if self.device().is_some_and(|d| d.has_pin_set()) {
-                    self.open_change_pin_form()
-                } else {
-                    self.open_set_pin_form()
                 }
             }
             KeyCode::Char('v') => self.verify_pin(),
