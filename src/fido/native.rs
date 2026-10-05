@@ -1,7 +1,6 @@
 //! [`FidoBackend`] implementation backed by the system libfido2.
 
 use std::ffi::{CStr, CString};
-use std::io::Read;
 use std::os::raw::{c_char, c_int};
 use std::ptr;
 use std::sync::Once;
@@ -211,14 +210,16 @@ fn cose_name(alg: c_int) -> &'static str {
     }
 }
 
+/// Random bytes from the kernel CSPRNG, used for self-test challenges.
 fn random_bytes<const N: usize>() -> [u8; N] {
     let mut b = [0u8; N];
-    if let Ok(mut f) = std::fs::File::open("/dev/urandom") {
-        let _ = f.read_exact(&mut b);
-    } else {
-        let u = uuid::Uuid::new_v4();
-        for (i, x) in b.iter_mut().enumerate() {
-            *x = u.as_bytes()[i % 16];
+    let mut filled = 0;
+    while filled < N {
+        let n = unsafe { libc::getrandom(b[filled..].as_mut_ptr().cast(), N - filled, 0) };
+        if n > 0 {
+            filled += n as usize;
+        } else if std::io::Error::last_os_error().kind() != std::io::ErrorKind::Interrupted {
+            panic!("getrandom failed: {}", std::io::Error::last_os_error());
         }
     }
     b

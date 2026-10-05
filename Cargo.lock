@@ -565,7 +565,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "uuid",
  "zeroize",
 ]
 
@@ -1974,7 +1973,6 @@ dependencies = [
  "atomic",
  "getrandom 0.4.3",
  "js-sys",
- "serde_core",
  "wasm-bindgen",
 ]
 
