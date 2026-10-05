@@ -129,6 +129,13 @@ GitHub Actions run formatting, clippy, tests on x86_64 and aarch64, a minimum
 Rust version check, ShellCheck, actionlint, Semgrep and a RustSec audit.
 Dependabot keeps crates and pinned actions up to date.
 
+### Releasing
+
+1. Update `version` in `Cargo.toml` and add a section to `CHANGELOG.md`.
+2. Commit, then tag and push: `git tag -a vX.Y.Z -m "fido2-tui vX.Y.Z" && git push origin vX.Y.Z`.
+3. The release workflow builds and tests both architectures and publishes the
+   archives, checksums and the changelog section as a GitHub release.
+
 The interface takes ideas from Yubico Authenticator, Token2 fido2-manage,
 keyroost, lazygit and k9s.
 
