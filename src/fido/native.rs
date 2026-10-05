@@ -483,7 +483,22 @@ impl FidoBackend for Libfido2 {
     }
 
     fn device_info(&self, s: &DeviceSummary) -> FidoResult<FidoDevice> {
-        self.device_info_once(s)
+        // Some firmware (seen on Pico-FIDO) occasionally fumbles a fresh channel:
+        // the reply is lost or lacks the CBOR capability bit. Retry, paced, since
+        // this call sends no PIN and is safe to repeat.
+        let mut last = None;
+        for attempt in 0..3 {
+            if attempt > 0 {
+                std::thread::sleep(Duration::from_millis(300));
+            }
+            match self.device_info_once(s) {
+                Ok(d) if d.is_fido2 => return Ok(d),
+                Ok(d) => last = Some(Ok(d)),
+                Err(e) if is_transport_error(&e) => last = Some(Err(e)),
+                Err(e) => return Err(e),
+            }
+        }
+        last.unwrap_or_else(|| Err(FidoError::other("no response")))
     }
 
     fn identify(&self, path: &str, timeout_ms: u32) -> FidoResult<bool> {
