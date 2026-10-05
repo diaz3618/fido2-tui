@@ -205,9 +205,17 @@ pub fn render(app: &App, f: &mut Frame, area: Rect) {
             st.push(Line::from(sp));
         }
         (None, Some(rem)) => st.push(kv(t, "Passkeys", format!("{rem} slots free"), w)),
-        (None, None) if d.supports_cred_mgmt() && d.has_pin_set() => {
-            st.push(kv_styled(t, "Passkeys", "unlock to count (u)", t.dim(), w))
-        }
+        (None, None) if d.supports_cred_mgmt() && d.has_pin_set() => st.push(kv_styled(
+            t,
+            "Passkeys",
+            if app.is_unlocked() {
+                "press u to load"
+            } else {
+                "unlock to count (u)"
+            },
+            t.dim(),
+            w,
+        )),
         _ => {}
     }
     if let Some(report) = app.audit() {

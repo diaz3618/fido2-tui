@@ -1231,19 +1231,37 @@ impl App {
             .to_string();
         let path = dev.path.clone();
         let has_pin = dev.has_pin_set();
+        let eddsa = dev.algorithms.iter().any(|a| a == "EdDSA");
+        let default_file = if eddsa {
+            "~/.ssh/id_ed25519_sk"
+        } else {
+            "~/.ssh/id_ecdsa_sk"
+        };
         let form = Form::new(
             "Generate SSH key",
             vec![
-                Field::choice("Type", &["ed25519-sk", "ecdsa-sk"], 0),
+                Field::choice(
+                    "Type",
+                    &["ed25519-sk", "ecdsa-sk"],
+                    if eddsa { 0 } else { 1 },
+                )
+                .hint(if eddsa {
+                    ""
+                } else {
+                    "this key does not support Ed25519"
+                }),
                 Field::toggle("Store on key (resident)", true)
                     .hint("lets you recover it with ssh-keygen -K"),
                 Field::toggle("Require PIN (verify-required)", has_pin),
                 Field::text("Application", "ssh:").hint("must start with ssh:"),
                 Field::text("Comment", &format!("{user}@{host} fido2")),
-                Field::text("Output file", "~/.ssh/id_ed25519_sk"),
+                Field::text("Output file", default_file),
             ],
             Box::new(move |app, f| {
                 let ktype = f[0].choice_label().to_string();
+                if ktype == "ed25519-sk" && !eddsa {
+                    return Err("This key does not support Ed25519 - choose ecdsa-sk".into());
+                }
                 let app_id = f[3].value.trim().to_string();
                 if !app_id.starts_with("ssh:") {
                     return Err("Application must start with \"ssh:\"".into());
@@ -1251,6 +1269,8 @@ impl App {
                 let mut out = f[5].value.trim().to_string();
                 if ktype == "ecdsa-sk" && out == "~/.ssh/id_ed25519_sk" {
                     out = "~/.ssh/id_ecdsa_sk".into();
+                } else if ktype == "ed25519-sk" && out == "~/.ssh/id_ecdsa_sk" {
+                    out = "~/.ssh/id_ed25519_sk".into();
                 }
                 let out = expand_home(&out);
                 if std::path::Path::new(&out).exists() {

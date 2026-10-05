@@ -293,18 +293,16 @@ fn render_form(t: &Theme, form: &Form, f: &mut Frame, area: Rect) {
         lines.push(Line::styled(format!("✗ {e}"), t.fg(t.danger)));
     }
     lines.push(Line::raw(""));
-    lines.push(
-        hints(
-            t,
-            &[
-                ("tab", "next"),
-                ("space/←→", "toggle"),
-                ("enter", form.submit_label.as_str()),
-                ("esc", "cancel"),
-            ],
-        )
-        .alignment(Alignment::Right),
-    );
+    let has_toggles = form
+        .fields
+        .iter()
+        .any(|f| matches!(f.kind, FieldKind::Toggle | FieldKind::Choice(_)));
+    let mut h = vec![("tab", "next")];
+    if has_toggles {
+        h.push(("space/←→", "toggle"));
+    }
+    h.extend([("enter", form.submit_label.as_str()), ("esc", "cancel")]);
+    lines.push(hints(t, &h).alignment(Alignment::Right));
     show(f, area, 80, lines, modal_block(t, &form.title, t.accent), 0);
 }
 
