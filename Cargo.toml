@@ -19,4 +19,5 @@ clap = { version = "4.5", features = ["derive"] }
 uuid = { version = "1.10", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 zeroize = "1.8"
+libc = "0.2"
 

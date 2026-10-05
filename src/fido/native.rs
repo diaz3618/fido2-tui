@@ -30,7 +30,8 @@ impl Default for Libfido2 {
 
 impl Libfido2 {
     pub fn new() -> Self {
-        INIT.call_once(|| unsafe { fido_init(0) });
+        // Never silently downgrade a FIDO2 key to U2F when GetInfo fails during open.
+        INIT.call_once(|| unsafe { fido_init(FIDO_DISABLE_U2F_FALLBACK) });
         Self {
             user_timeout: Duration::from_secs(30),
         }
@@ -39,6 +40,13 @@ impl Libfido2 {
 
 pub fn strerr(code: i32) -> String {
     unsafe { cstr(fido_strerr(code)) }.unwrap_or_else(|| format!("libfido2 error {code}"))
+}
+
+fn is_transport_error(e: &FidoError) -> bool {
+    matches!(
+        e.code,
+        FIDO_ERR_TX | FIDO_ERR_RX | FIDO_ERR_CHANNEL_BUSY | FIDO_ERR_TIMEOUT
+    )
 }
 
 fn check(rc: c_int, op: &str) -> FidoResult<()> {
@@ -147,7 +155,19 @@ impl<T> Drop for Owned<T> {
 struct Dev(*mut fido_dev_t);
 
 impl Dev {
+    /// Open with one retry: keys occasionally miss the first CTAPHID exchange
+    /// (e.g. while another application is talking to them).
     fn open(path: &str) -> FidoResult<Self> {
+        match Self::open_once(path) {
+            Err(e) if is_transport_error(&e) => {
+                std::thread::sleep(Duration::from_millis(300));
+                Self::open_once(path)
+            }
+            r => r,
+        }
+    }
+
+    fn open_once(path: &str) -> FidoResult<Self> {
         let cpath = c_string(path, "device path")?;
         let dev = unsafe { fido_dev_new() };
         if dev.is_null() {

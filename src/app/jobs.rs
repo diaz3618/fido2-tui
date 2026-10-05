@@ -147,6 +147,7 @@ impl Jobs {
         let tx = self.tx.clone();
         let lock = self.device_lock.clone();
         let work = move || {
+            block_signals();
             let _guard = lock.lock().unwrap_or_else(|e| e.into_inner());
             let ptx = tx.clone();
             let progress = move |p: Progress| {
@@ -166,5 +167,16 @@ impl Jobs {
                 .spawn(work)
                 .expect("spawn worker thread");
         }
+    }
+}
+
+/// Keep terminal signals (SIGWINCH, SIGINT, ...) off worker threads: libfido2
+/// waits for HID reports with ppoll(), and an interrupted wait makes it treat
+/// a FIDO2 key as U2F-only or abort an operation mid-way.
+fn block_signals() {
+    unsafe {
+        let mut set: libc::sigset_t = std::mem::zeroed();
+        libc::sigfillset(&mut set);
+        libc::pthread_sigmask(libc::SIG_BLOCK, &set, std::ptr::null_mut());
     }
 }
