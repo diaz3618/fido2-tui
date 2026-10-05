@@ -7,7 +7,8 @@ The app talks to keys through the system libfido2 library, notices keys being
 plugged in or removed, and runs device operations on a worker thread so the
 interface stays responsive while a key waits for a touch.
 
-Developed against a Pico-FIDO key (Waveshare RP2350-USB). Any CTAP2
+Developed against a Waveshare RP2350-USB board running the
+[Pico-FIDO](https://github.com/polhenarejos/pico-fido) firmware. Any CTAP2
 authenticator should work: YubiKey, Nitrokey, SoloKeys, Token2, Feitian,
 Google Titan and others.
 
@@ -92,7 +93,7 @@ theme and `q` to quit.
   accessible, run `./install.sh` to add the udev rule and re-plug the key.
 - Passkeys page asks for a PIN: CTAP requires a PIN for credential management.
   Keys without one get a prompt to set it.
-- Pico-FIDO reports Always-UV as enabled whenever a PIN is set, whatever the
+- [Pico-FIDO](https://github.com/polhenarejos/pico-fido) reports Always-UV as enabled whenever a PIN is set, whatever the
   stored setting is; the app points this out after toggling. Its user-presence
   button can be disabled in the firmware configuration, in which case touch
   prompts finish without a press. Some firmware versions occasionally miss the
@@ -117,6 +118,13 @@ cargo clippy --all-targets
 
 The interface takes ideas from Yubico Authenticator, Token2 fido2-manage,
 keyroost, lazygit and k9s.
+
+## Acknowledgements
+
+- [Pico-FIDO](https://github.com/polhenarejos/pico-fido) by Pol Henarejos:
+  the open-source FIDO2 firmware used on the development and test key.
+- [libfido2](https://github.com/Yubico/libfido2) by Yubico: the library this
+  application uses to talk to authenticators.
 
 ## License
 
