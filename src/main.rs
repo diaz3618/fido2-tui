@@ -99,6 +99,7 @@ fn run_external(terminal: &mut ratatui::DefaultTerminal, cmd: &ExternalCommand) 
     let _ = execute!(std::io::stdout(), DisableBracketedPaste);
     ratatui::restore();
     let mut out = std::io::stdout();
+    write!(out, "\x1b[2J\x1b[H")?;
     writeln!(out, "\x1b[1;36m==> {}\x1b[0m", cmd.title)?;
     writeln!(out, "\x1b[2m$ {}\x1b[0m\n", cmd.display())?;
     out.flush()?;
@@ -108,7 +109,24 @@ fn run_external(terminal: &mut ratatui::DefaultTerminal, cmd: &ExternalCommand) 
     if let Some(dir) = &cmd.cwd {
         c.current_dir(dir);
     }
-    let ok = match c.status() {
+    // Ctrl-C / Ctrl-\ should stop the child, not fido2-tui: ignore them here and
+    // restore default handling in the child before exec.
+    use std::os::unix::process::CommandExt;
+    unsafe {
+        c.pre_exec(|| {
+            libc::signal(libc::SIGINT, libc::SIG_DFL);
+            libc::signal(libc::SIGQUIT, libc::SIG_DFL);
+            Ok(())
+        });
+    }
+    let prev_int = unsafe { libc::signal(libc::SIGINT, libc::SIG_IGN) };
+    let prev_quit = unsafe { libc::signal(libc::SIGQUIT, libc::SIG_IGN) };
+    let status = c.status();
+    unsafe {
+        libc::signal(libc::SIGINT, prev_int);
+        libc::signal(libc::SIGQUIT, prev_quit);
+    }
+    let ok = match status {
         Ok(s) if s.success() => {
             println!("\n\x1b[32m✓ Done.\x1b[0m");
             true
@@ -127,9 +145,10 @@ fn run_external(terminal: &mut ratatui::DefaultTerminal, cmd: &ExternalCommand) 
     let mut line = String::new();
     let _ = std::io::stdin().read_line(&mut line);
 
+    // A fresh Terminal has empty buffers, so the next draw repaints everything.
+    // (Terminal::clear() would query the cursor position, which can time out here.)
     *terminal = ratatui::init();
     execute!(std::io::stdout(), EnableBracketedPaste)?;
-    terminal.clear()?;
     Ok(ok)
 }
 
