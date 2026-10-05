@@ -2,6 +2,7 @@
 name = "fido2-tui"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
 authors = ["Daniel Diaz Santiago <daniel.diaz.stg@gmail.com>"]
 description = "Terminal UI for managing FIDO2 security keys: passkeys, PIN, fingerprints, SSH and LUKS2 unlock"
 license-file = "LICENSE"

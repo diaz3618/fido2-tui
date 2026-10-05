@@ -125,6 +125,10 @@ and `pre-push` (tests, and release tags must match `Cargo.toml` and
 git config core.hooksPath .githooks
 ```
 
+GitHub Actions run formatting, clippy, tests on x86_64 and aarch64, a minimum
+Rust version check, ShellCheck, actionlint, Semgrep and a RustSec audit.
+Dependabot keeps crates and pinned actions up to date.
+
 The interface takes ideas from Yubico Authenticator, Token2 fido2-manage,
 keyroost, lazygit and k9s.
 
