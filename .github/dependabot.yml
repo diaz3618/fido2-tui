@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Wait a week before proposing a new release, so bad or malicious
+    # versions have time to be yanked.
+    cooldown:
+      default-days: 7
     groups:
       cargo:
         patterns: ["*"]
@@ -13,6 +17,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
