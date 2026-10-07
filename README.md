@@ -1,5 +1,10 @@
 # fido2-tui
 
+[![CI](https://github.com/diaz3618/fido2-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/diaz3618/fido2-tui/actions/workflows/ci.yml)
+[![Semgrep](https://github.com/diaz3618/fido2-tui/actions/workflows/semgrep.yml/badge.svg)](https://github.com/diaz3618/fido2-tui/actions/workflows/semgrep.yml)
+[![Dependency audit](https://github.com/diaz3618/fido2-tui/actions/workflows/audit.yml/badge.svg)](https://github.com/diaz3618/fido2-tui/actions/workflows/audit.yml)
+[![Release](https://img.shields.io/github/v/release/diaz3618/fido2-tui)](https://github.com/diaz3618/fido2-tui/releases/latest)
+
 Terminal UI for managing FIDO2 security keys on Linux: passkeys, PIN and
 security policy, fingerprints, large blobs, SSH keys and LUKS2 disk unlock.
 
@@ -13,6 +18,23 @@ authenticator should work: YubiKey, Nitrokey, SoloKeys, Token2, Feitian,
 Google Titan and others.
 
 ## Installation
+
+### Prebuilt binaries
+
+Each [release](https://github.com/diaz3618/fido2-tui/releases) has x86_64 and
+aarch64 Linux builds. They are linked against the system libfido2, so install
+it first (`libfido2` on Fedora/Arch/openSUSE, `libfido2-1` on Debian/Ubuntu):
+
+```bash
+tar xzf fido2-tui-v1.0.0-x86_64-linux.tar.gz
+sha256sum -c fido2-tui-v1.0.0-x86_64-linux.tar.gz.sha256
+install -Dm755 fido2-tui-v1.0.0-x86_64-linux/fido2-tui ~/.local/bin/fido2-tui
+```
+
+The binaries are built on Ubuntu 24.04 and need glibc 2.39 or newer; on older
+systems build from source with the installer.
+
+### From source
 
 ```bash
 ./install.sh              # dependencies, build, install to ~/.local/bin
