@@ -25,9 +25,11 @@ Each [release](https://github.com/diaz3618/fido2-tui/releases) has x86_64 and
 aarch64 Linux builds. They are linked against the system libfido2, so install
 it first (`libfido2` on Fedora/Arch/openSUSE, `libfido2-1` on Debian/Ubuntu):
 
+Download the archive for your architecture and `SHA256SUMS`, then:
+
 ```bash
+sha256sum -c --ignore-missing SHA256SUMS
 tar xzf fido2-tui-v1.0.0-x86_64-linux.tar.gz
-sha256sum -c fido2-tui-v1.0.0-x86_64-linux.tar.gz.sha256
 install -Dm755 fido2-tui-v1.0.0-x86_64-linux/fido2-tui ~/.local/bin/fido2-tui
 ```
 
